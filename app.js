@@ -23,7 +23,10 @@ const primaryContent = document.getElementById('primaryContent');
 const kgLevel = document.getElementById('kgLevel');
 const kg1Content = document.getElementById('kg1Content');
 const kg2Content = document.getElementById('kg2Content');
-const loadingOverlay = document.getElementById('loadingOverlay');
+
+// Overlay and Loader elements
+const overlay = document.getElementById('overlay');
+const loader = document.getElementById('loader');
 
 // Toggle visibility between KG and Primary/Prep/High
 kgCheckbox.addEventListener('change', () => {
@@ -61,6 +64,9 @@ function validateForm() {
     const visibleDropdowns = Array.from(document.querySelectorAll('select')).filter(dropdown => dropdown.offsetParent !== null && !dropdown.disabled);
     const visibleInputs = Array.from(document.querySelectorAll('input[type="text"], input[type="date"]')).filter(input => input.offsetParent !== null && !input.disabled);
 
+    console.log(`Visible Dropdowns: ${visibleDropdowns.map(dropdown => dropdown.id).join(', ')}`);
+    console.log(`Visible Inputs: ${visibleInputs.map(input => input.id).join(', ')}`);
+
     // Check if any visible dropdown has its default value
     visibleDropdowns.forEach(dropdown => {
         console.log(`Checking dropdown: ${dropdown.id}, value: ${dropdown.value}`);
@@ -93,21 +99,38 @@ function validateForm() {
 document.getElementById('schoolForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
+   // Check the current time
+const currentTime = new Date();
+const currentHour = currentTime.getHours();
+const currentMinute = currentTime.getMinutes();
+
+// If the current time is 3:00 PM or later, do not allow form submission
+if (currentHour > 16 || (currentHour === 16 && currentMinute > 0)) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'لا يمكن إرسال البيانات بعد الساعة 3 عصرًا!',
+    });
+    return;
+}
+
+
     // Validate form
     if (!validateForm()) return;
 
-    // Show the loading overlay
-    loadingOverlay.style.display = 'flex';
+    // Show overlay and loader
+    overlay.style.display = 'block';
+    loader.style.display = 'block';
 
     let formData = {};
-    const selectedDate = document.getElementById('date').value;
-    const day = new Date(selectedDate).toLocaleString('en-US', { weekday: 'long' });
-    let classroom, subject, homework, reminder, grade;
+    const selectedDate = new Date(); // استخدام تاريخ اليوم
+    const day = selectedDate.toLocaleString('en-US', { weekday: 'long' });
+    const classroom = kgCheckbox.checked ? document.getElementById('kgClassRoom').value : document.getElementById('grade').value;
+    let subject, homework, reminder, grade;
 
     // If KG is selected
     if (kgCheckbox.checked) {
         const kgLevelValue = document.getElementById('kgLevel').value;
-        classroom = document.getElementById('kgClassRoom').value;
         homework = document.getElementById('kgHomework').value;
         reminder = document.getElementById('kgReminder').value;
 
@@ -120,7 +143,6 @@ document.getElementById('schoolForm').addEventListener('submit', async (event) =
         }
     } else {
         // If Primary/Prep/High is selected
-        classroom = document.getElementById('grade').value;
         subject = document.getElementById('subject').value;
         homework = document.getElementById('homework').value;
         reminder = document.getElementById('reminder').value;
@@ -129,7 +151,7 @@ document.getElementById('schoolForm').addEventListener('submit', async (event) =
 
     formData = {
         classroom,
-        date: selectedDate,
+        date: selectedDate.toISOString().split('T')[0], // إرسال تاريخ اليوم
         day,
         grade,
         homework,
@@ -141,9 +163,6 @@ document.getElementById('schoolForm').addEventListener('submit', async (event) =
         const docRef = await addDoc(collection(db, "Daily-plane"), formData);
         console.log("Document written with ID: ", docRef.id);
 
-        // Hide the loading overlay
-        loadingOverlay.style.display = 'none';
-
         // Show SweetAlert success
         Swal.fire({
             icon: 'success',
@@ -153,14 +172,14 @@ document.getElementById('schoolForm').addEventListener('submit', async (event) =
 
     } catch (error) {
         console.error("Error adding document: ", error);
-
-        // Hide the loading overlay
-        loadingOverlay.style.display = 'none';
-
         Swal.fire({
             icon: 'error',
             title: 'Error',
             text: 'Error submitting the form!',
         });
+    } finally {
+        // Hide overlay and loader
+        overlay.style.display = 'none';
+        loader.style.display = 'none';
     }
 });
