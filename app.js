@@ -105,7 +105,7 @@ const currentHour = currentTime.getHours();
 const currentMinute = currentTime.getMinutes();
 
 // If the current time is 3:00 PM or later, do not allow form submission
-if (currentHour > 16 || (currentHour === 16 && currentMinute > 0)) {
+if (currentHour > 24 || (currentHour === 24 && currentMinute > 0)) {
     Swal.fire({
         icon: 'error',
         title: 'Error',
