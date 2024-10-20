@@ -1,6 +1,7 @@
 // Initialize Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { addDoc, collection, getFirestore } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC_I-Ty57uikZsNtMdCDAalifqEYVQXkHQ",
@@ -12,8 +13,10 @@ const firebaseConfig = {
   measurementId: "G-YGDPJEZHET"
 };
 
+// Initialize Firebase services
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Select elements
 const kgCheckbox = document.getElementById('kgCheckbox');
@@ -27,6 +30,9 @@ const kg2Content = document.getElementById('kg2Content');
 // Overlay and Loader elements
 const overlay = document.getElementById('overlay');
 const loader = document.getElementById('loader');
+
+// File input
+const fileInput = document.getElementById('fileInput');
 
 // Toggle visibility between KG and Primary/Prep/High
 kgCheckbox.addEventListener('change', () => {
@@ -64,12 +70,8 @@ function validateForm() {
     const visibleDropdowns = Array.from(document.querySelectorAll('select')).filter(dropdown => dropdown.offsetParent !== null && !dropdown.disabled);
     const visibleInputs = Array.from(document.querySelectorAll('input[type="text"], input[type="date"]')).filter(input => input.offsetParent !== null && !input.disabled);
 
-    console.log(`Visible Dropdowns: ${visibleDropdowns.map(dropdown => dropdown.id).join(', ')}`);
-    console.log(`Visible Inputs: ${visibleInputs.map(input => input.id).join(', ')}`);
-
     // Check if any visible dropdown has its default value
     visibleDropdowns.forEach(dropdown => {
-        console.log(`Checking dropdown: ${dropdown.id}, value: ${dropdown.value}`);
         if (dropdown.value === "" || dropdown.value.includes("Select")) {
             hasEmptyField = true;
         }
@@ -77,14 +79,12 @@ function validateForm() {
 
     // Check if any visible input is empty
     visibleInputs.forEach(input => {
-        console.log(`Checking input: ${input.id}, value: ${input.value}`);
         if (input.value.trim() === "") {
             hasEmptyField = true;
         }
     });
 
     if (hasEmptyField) {
-        // Show SweetAlert error if any required field is not filled
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -95,25 +95,33 @@ function validateForm() {
     return true;
 }
 
+// Validate file type
+function validateFile(file) {
+    if (file) {
+        const validExtensions = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+        return validExtensions.includes(file.type);
+    }
+    return true; // If no file is selected, it's valid
+}
+
 // Handle form submission
 document.getElementById('schoolForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
-   // Check the current time
-const currentTime = new Date();
-const currentHour = currentTime.getHours();
-const currentMinute = currentTime.getMinutes();
+    // Check the current time
+    const currentTime = new Date();
+    const currentHour = currentTime.getHours();
+    const currentMinute = currentTime.getMinutes();
 
-// If the current time is 3:00 PM or later, do not allow form submission
-if (currentHour > 24 || (currentHour === 24 && currentMinute > 0)) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'لا يمكن إرسال البيانات بعد الساعة 3 عصرًا!',
-    });
-    return;
-}
-
+    // If the current time is 3:00 PM or later, do not allow form submission
+    if (currentHour > 15 || (currentHour === 15 && currentMinute > 0)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'لا يمكن إرسال البيانات بعد الساعة 3 عصرًا!',
+        });
+        return;
+    }
 
     // Validate form
     if (!validateForm()) return;
@@ -149,6 +157,7 @@ if (currentHour > 24 || (currentHour === 24 && currentMinute > 0)) {
         grade = document.getElementById('classRoom').value;
     }
 
+    // Prepare the formData object
     formData = {
         classroom,
         date: selectedDate.toISOString().split('T')[0], // إرسال تاريخ اليوم
@@ -159,7 +168,32 @@ if (currentHour > 24 || (currentHour === 24 && currentMinute > 0)) {
         subject
     };
 
+    // File handling
+    const file = fileInput.files[0]; // Get the file from input
+
+    if (file && !validateFile(file)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'يرجى رفع ملف بصيغة PDF، صورة، ملف Word، أو ملف PowerPoint فقط!',
+        });
+        overlay.style.display = 'none';
+        loader.style.display = 'none';
+        return;
+    }
+
     try {
+        let fileURL = null;
+
+        // If a file is selected, upload it to Firebase Storage
+        if (file) {
+            const storageRef = ref(storage, `files/${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            fileURL = await getDownloadURL(snapshot.ref);
+            formData.fileURL = fileURL; // Add file URL to formData
+        }
+
+        // Add form data to Firestore
         const docRef = await addDoc(collection(db, "Daily-plane"), formData);
         console.log("Document written with ID: ", docRef.id);
 
