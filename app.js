@@ -114,7 +114,7 @@ document.getElementById('schoolForm').addEventListener('submit', async (event) =
     const currentMinute = currentTime.getMinutes();
 
     // If the current time is 3:00 PM or later, do not allow form submission
-    if (currentHour > 24 || (currentHour === 24 && currentMinute > 0)) {
+    if (currentHour > 15 || (currentHour === 24 && currentMinute > 0)) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
