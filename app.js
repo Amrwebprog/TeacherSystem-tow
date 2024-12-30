@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/fireba
 import { addDoc, collection, getFirestore } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
 
-const firebaseConfig = {
+/* const firebaseConfig = {
   apiKey: "AIzaSyC_I-Ty57uikZsNtMdCDAalifqEYVQXkHQ",
   authDomain: "daily-plan-tow.firebaseapp.com",
   projectId: "daily-plan-tow",
@@ -12,11 +12,11 @@ const firebaseConfig = {
   appId: "1:291260018405:web:b84ad553e8220aa6acae0c",
   measurementId: "G-YGDPJEZHET"
 };
-
+ */
 // Initialize Firebase services
-const app = initializeApp(firebaseConfig);
+/* const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
+const storage = getStorage(app); */
 
 // Select elements
 const kgCheckbox = document.getElementById('kgCheckbox');
